@@ -1,0 +1,22 @@
+default: &default
+  adapter: mysql2
+  encoding: utf8
+  pool: 5
+  username: andrew
+  password: 12345
+  host: db
+  port: 3306
+  variables:
+    sql_mode: TRADITIONAL
+
+development:
+  <<: *default
+  database: chatting_system_dev
+
+test:
+  <<: *default
+  database: chatting_system_test
+
+production:
+  <<: *default
+  database: chatting_system_prod

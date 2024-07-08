@@ -1,0 +1,3 @@
+update_counts:
+  cron: "0 * * * *"
+  class: "UpdateCountsWorker"
