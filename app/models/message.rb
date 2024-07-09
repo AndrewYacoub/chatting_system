@@ -1,7 +1,7 @@
 class Message < ApplicationRecord
   include Elasticsearch::Model
   include Elasticsearch::Model::Callbacks
-  
+
   before_create :assign_number
   validates :body, presence: true
   belongs_to :chat, counter_cache: true
@@ -16,7 +16,10 @@ class Message < ApplicationRecord
     as_json(only: [:body, :chat_id])
   end
 
-
+  unless Message.__elasticsearch__.index_exists?
+    Message.__elasticsearch__.create_index!
+    Message.import
+  end
 
   private
 
