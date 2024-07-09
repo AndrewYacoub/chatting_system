@@ -1,11 +1,22 @@
 class Message < ApplicationRecord
   include Elasticsearch::Model
   include Elasticsearch::Model::Callbacks
-
-  belongs_to :chat, counter_cache: true
-
+  
   before_create :assign_number
   validates :body, presence: true
+  belongs_to :chat, counter_cache: true
+
+  settings index: { number_of_shards: 1 } do
+    mappings dynamic: false do
+      indexes :body, type: :text, analyzer: 'standard'
+    end
+  end
+
+  def as_indexed_json(options = {})
+    as_json(only: [:body, :chat_id])
+  end
+
+
 
   private
 

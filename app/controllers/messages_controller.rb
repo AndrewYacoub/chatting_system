@@ -2,25 +2,23 @@ class MessagesController < ApplicationController
     before_action :set_chat
   
     def create
-      message = @chat.messages.new(message_params)
+      chat = Chat.find(params[:chat_id])
+      message = chat.messages.build(message_params)
       if message.save
-        render json: { number: message.number }, status: :created
+        render json: message, status: :created
       else
         render json: { errors: message.errors.full_messages }, status: :unprocessable_entity
       end
     end
-
+  
     def search
-      chat = Chat.find_by(id: params[:chat_id], application: Application.find_by(token: params[:application_token]))
-      if chat.nil?
+      chat = Chat.find(params[:chat_id])
+      if chat
+        messages = Message.search(query: { match: { body: params[:query] } }).records.where(chat_id: chat.id)
+        render json: messages
+      else
         render json: { error: 'Chat not found' }, status: :not_found
-        return
       end
-  
-      query = params[:query]
-      messages = chat.messages.where('body LIKE ?', "%#{query}%") # Adjust this line according to your search implementation
-  
-      render json: messages
     end
 
     def index
