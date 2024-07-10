@@ -1,13 +1,12 @@
 class MessagesController < ApplicationController
-  before_action :initialize_redis
   before_action :set_chat
   before_action :set_message, only: [:show, :update, :destroy]
 
   def create
     message = @chat.messages.build(message_params)
     if message.save
-      clear_cache
-      cache_message(message)
+      @redis_service.clear_cache(:messages, @chat.id)
+      @redis_service.cache_message(message)
       render json: message, status: :created
     else
       render json: { errors: message.errors.full_messages }, status: :unprocessable_entity
@@ -24,7 +23,7 @@ class MessagesController < ApplicationController
   end
 
   def index
-    messages = fetch_cached_messages
+    messages = @redis_service.fetch_cached_messages(@chat.id)
     render json: messages
   end
 
@@ -38,8 +37,8 @@ class MessagesController < ApplicationController
 
   def update
     if @message.update(message_params)
-      clear_cache
-      cache_message(@message)
+      @redis_service.clear_cache(:messages, @chat.id)
+      @redis_service.cache_message(@message)
       render json: @message
     else
       render json: { errors: @message.errors.full_messages }, status: :unprocessable_entity
@@ -48,8 +47,8 @@ class MessagesController < ApplicationController
 
   def destroy
     if @message.destroy
-      clear_cache
-      @redis.del("message:#{@message.id}")
+      @redis_service.clear_cache(:messages, @chat.id)
+      @redis_service.clear_cache(:message, @message.id)
       render json: { message: 'Message deleted successfully' }, status: :ok
     else
       render json: { error: 'Failed to delete message' }, status: :unprocessable_entity
@@ -69,49 +68,10 @@ class MessagesController < ApplicationController
   end
 
   def set_message
-    @message = fetch_cached_message(params[:id])
+    @message = @redis_service.fetch_cached_message(params[:id])
   end
 
   def message_params
     params.require(:message).permit(:body)
-  end
-
-  def initialize_redis
-    redis_host = ENV.fetch("REDIS_HOST") { 'localhost' }
-    redis_port = ENV.fetch("REDIS_PORT") { 6379 }
-    @redis = Redis.new(host: redis_host, port: redis_port)
-  end
-
-  def fetch_cached_message(id)
-    cached_message = @redis.get("message:#{id}")
-    if cached_message
-      Message.find_by(id: id)
-    else
-      message = Message.find_by(id: id)
-      if message
-        @redis.set("message:#{id}", message.to_json)
-        message
-      end
-    end
-  end
-
-  def fetch_cached_messages
-    cached_messages = @redis.get("messages:#{@chat.id}")
-    if cached_messages
-      JSON.parse(cached_messages).map { |msg| Message.new(msg) }
-    else
-      messages = @chat.messages
-      @redis.set("messages:#{@chat.id}", messages.to_json)
-      messages
-    end
-  end
-
-  def cache_message(message)
-    @redis.set("message:#{message.id}", message.to_json)
-    @redis.del("messages:#{@chat.id}")
-  end
-
-  def clear_cache
-    @redis.del("messages:#{@chat.id}")
   end
 end
