@@ -9,7 +9,7 @@ gem "mysql2"
 gem 'elasticsearch-model', '~> 7.0'
 gem 'elasticsearch-rails', '~> 7.0'
 gem 'sidekiq'
-gem 'redis'
+gem 'redis', '~> 5.2'
 gem 'whenever', require: false
 # Use Puma as the app server
 gem 'puma', '~> 5.0'
